@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Simples Nacional e Fator R</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .result-card {
+            transition: all 0.3s ease-in-out;
+        }
+        .input-group label {
+            color: #4A5568; /* gray-700 */
+        }
+        .input-field {
+            border-color: #CBD5E0; /* gray-400 */
+            transition: border-color 0.3s ease, background-color 0.3s ease;
+        }
+        .input-field:focus {
+            border-color: #4299E1; /* blue-500 */
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+        }
+        .input-field:disabled {
+            background-color: #F7FAFC; /* gray-100 */
+            color: #718096; /* gray-600 - para melhor leitura do valor preenchido */
+            cursor: not-allowed;
+            border-color: #E2E8F0; /* gray-300 */
+        }
+        .btn-primary {
+            background-color: #4299E1; /* blue-500 */
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+        .btn-primary:hover {
+            background-color: #3182CE; /* blue-600 */
+        }
+        .info-box {
+            background-color: #EBF8FF; /* blue-100 */
+            border-left: 4px solid #4299E1; /* blue-500 */
+            color: #2C5282; /* blue-800 */
+        }
+        .error-box {
+            background-color: #FFF5F5; /* red-100 */
+            border-left: 4px solid #F56565; /* red-500 */
+            color: #C53030; /* red-800 */
+        }
+        .label-disabled {
+            color: #A0AEC0; /* gray-500 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+    <div class="container mx-auto max-w-2xl bg-white shadow-xl rounded-lg p-6 md:p-10">
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl font-bold text-gray-800">Calculadora Simples Nacional e Fator R</h1>
+            <p class="text-gray-600 mt-2">Estime o Fator R e seus tributos (Anexo III ou V)</p>
+        </header>
+
+        <div class="space-y-6">
+            <div class="input-group">
+                <label for="faturamentoMensal" class="block text-sm font-medium text-gray-700 mb-1">Faturamento Mensal (R$)</label>
+                <input type="number" id="faturamentoMensal" name="faturamentoMensal" placeholder="Ex: 15000" class="input-field mt-1 block w-full px-4 py-3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            </div>
+
+            <div class="input-group">
+                <div class="flex items-center mb-2">
+                    <input id="usarProLaboreCheckbox" name="usarProLaboreCheckbox" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
+                    <label for="usarProLaboreCheckbox" class="ml-2 block text-sm font-medium text-gray-700">Informar Pró-labore (para Fator R customizado)</label>
+                </div>
+                <p class="text-xs text-gray-500 mb-1 ml-6">Se desmarcado, Fator R será 28% (Anexo III), e o pró-labore correspondente será calculado.</p>
+            </div>
+            
+            <div class="input-group">
+                <label for="proLabore" id="proLaboreLabel" class="block text-sm font-medium text-gray-700 mb-1">Pró-labore Mensal (R$)</label>
+                <input type="number" id="proLabore" name="proLabore" placeholder="Ex: 4200 (ou será calculado)" class="input-field mt-1 block w-full px-4 py-3 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+            </div>
+            
+            <div>
+                <button id="calcularBtn" class="w-full btn-primary font-semibold py-3 px-4 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    Calcular Estimativa
+                </button>
+            </div>
+        </div>
+
+        <div id="resultados" class="mt-10 space-y-4 hidden">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 text-center">Resultados da Simulação</h2>
+            
+            <div id="proLaboreConsideradoResult" class="result-card bg-gray-50 p-4 rounded-lg shadow">
+                <p class="text-gray-700"><strong class="font-medium text-gray-900">Pró-labore Considerado:</strong> <span id="proLaboreConsideradoValor" class="font-bold"></span></p>
+            </div>
+
+            <div id="fatorRResult" class="result-card bg-gray-50 p-4 rounded-lg shadow">
+                <p class="text-gray-700"><strong class="font-medium text-gray-900">Fator R:</strong> <span id="fatorRValor" class="font-bold"></span></p>
+            </div>
+
+            <div id="anexoResult" class="result-card bg-gray-50 p-4 rounded-lg shadow">
+                <p class="text-gray-700"><strong class="font-medium text-gray-900">Enquadramento:</strong> <span id="anexoValor" class="font-bold"></span></p>
+            </div>
+            
+            <div id="aliquotaEfetivaResult" class="result-card bg-gray-50 p-4 rounded-lg shadow">
+                <p class="text-gray-700"><strong class="font-medium text-gray-900">Alíquota Efetiva Estimada:</strong> <span id="aliquotaEfetivaValor" class="font-bold"></span></p>
+            </div>
+
+            <div id="tributoEstimadoResult" class="result-card bg-green-50 p-6 rounded-lg shadow border border-green-200">
+                <p class="text-green-800 text-lg"><strong class="font-semibold text-green-900">Tributo Mensal Estimado (DAS):</strong> <span id="tributoEstimadoValor" class="font-bold text-xl"></span></p>
+            </div>
+
+            <div id="mensagemAlerta" class="p-4 rounded-md"></div>
+        </div>
+
+        <footer class="mt-10 text-center text-sm text-gray-500">
+            <p><strong>Atenção:</strong> Este simulador oferece uma estimativa e não substitui o cálculo oficial realizado por um contador. As alíquotas e regras podem variar.</p>
+            <p>O cálculo do Fator R, quando informado o pró-labore, considera os valores mensais como representativos para a apuração dos últimos 12 meses.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Definição das tabelas do Simples Nacional
+        const anexoIII = [
+            { faixaAte: 180000, aliquota: 0.06, deduzir: 0 },
+            { faixaAte: 360000, aliquota: 0.112, deduzir: 9360 },
+            { faixaAte: 720000, aliquota: 0.135, deduzir: 17640 },
+            { faixaAte: 1800000, aliquota: 0.16, deduzir: 35640 },
+            { faixaAte: 3600000, aliquota: 0.21, deduzir: 125640 },
+            { faixaAte: 4800000, aliquota: 0.33, deduzir: 648000 },
+        ];
+
+        const anexoV = [
+            { faixaAte: 180000, aliquota: 0.155, deduzir: 0 },
+            { faixaAte: 360000, aliquota: 0.18, deduzir: 4500 },
+            { faixaAte: 720000, aliquota: 0.195, deduzir: 9900 },
+            { faixaAte: 1800000, aliquota: 0.205, deduzir: 17100 },
+            { faixaAte: 3600000, aliquota: 0.23, deduzir: 62100 },
+            { faixaAte: 4800000, aliquota: 0.305, deduzir: 540000 },
+        ];
+
+        // Função para formatar valores monetários
+        function formatCurrency(value) {
+            return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        // Função para formatar percentuais
+        function formatPercentage(value) {
+            return (value * 100).toFixed(2) + '%';
+        }
+        
+        // Elementos do DOM
+        const faturamentoMensalEl = document.getElementById('faturamentoMensal');
+        const proLaboreEl = document.getElementById('proLabore');
+        const proLaboreLabel = document.getElementById('proLaboreLabel');
+        const usarProLaboreCheckbox = document.getElementById('usarProLaboreCheckbox');
+        const calcularBtn = document.getElementById('calcularBtn');
+        const resultadosDiv = document.getElementById('resultados');
+        const proLaboreConsideradoValorEl = document.getElementById('proLaboreConsideradoValor'); 
+        const fatorRValorEl = document.getElementById('fatorRValor');
+        const anexoValorEl = document.getElementById('anexoValor');
+        const aliquotaEfetivaValorEl = document.getElementById('aliquotaEfetivaValor');
+        const tributoEstimadoValorEl = document.getElementById('tributoEstimadoValor');
+        const mensagemAlertaEl = document.getElementById('mensagemAlerta');
+
+        // Função para atualizar estado do campo pró-labore
+        function atualizarEstadoProLabore() {
+            if (usarProLaboreCheckbox.checked) {
+                proLaboreEl.disabled = false;
+                proLaboreEl.value = ''; 
+                proLaboreEl.placeholder = "Ex: 4200";
+                proLaboreEl.classList.remove('input-field:disabled');
+                proLaboreLabel.classList.remove('label-disabled');
+            } else {
+                proLaboreEl.disabled = true;
+                proLaboreEl.value = ''; 
+                proLaboreEl.placeholder = "Será calculado (28% do Faturamento)";
+                proLaboreEl.classList.add('input-field:disabled'); 
+                proLaboreLabel.classList.add('label-disabled');
+                // Limpar resultados se o checkbox for desmarcado
+                resultadosDiv.classList.add('hidden');
+                mensagemAlertaEl.textContent = '';
+                mensagemAlertaEl.className = 'p-4 rounded-md';
+            }
+        }
+
+        // Event listener para o checkbox
+        usarProLaboreCheckbox.addEventListener('change', atualizarEstadoProLabore);
+
+        // Estado inicial do campo pró-labore
+        atualizarEstadoProLabore();
+
+
+        calcularBtn.addEventListener('click', () => {
+            mensagemAlertaEl.textContent = '';
+            mensagemAlertaEl.className = 'p-4 rounded-md'; 
+
+            const faturamentoMensal = parseFloat(faturamentoMensalEl.value);
+
+            // Validação do faturamento mensal
+            if (isNaN(faturamentoMensal) || faturamentoMensal <= 0) {
+                mensagemAlertaEl.textContent = 'Por favor, insira um valor válido para o Faturamento Mensal.';
+                mensagemAlertaEl.classList.add('error-box');
+                resultadosDiv.classList.add('hidden');
+                faturamentoMensalEl.focus();
+                return;
+            }
+
+            let fatorR;
+            let proLaboreConsiderado;
+
+            // Determina pró-labore e Fator R com base no checkbox
+            if (usarProLaboreCheckbox.checked) {
+                const proLaboreInput = parseFloat(proLaboreEl.value);
+                if (isNaN(proLaboreInput) || proLaboreInput < 0) {
+                    mensagemAlertaEl.textContent = 'Por favor, insira um valor válido para o Pró-labore.';
+                    mensagemAlertaEl.classList.add('error-box');
+                    resultadosDiv.classList.add('hidden');
+                    proLaboreEl.focus();
+                    return;
+                }
+                proLaboreConsiderado = proLaboreInput;
+                fatorR = faturamentoMensal > 0 ? proLaboreConsiderado / faturamentoMensal : 0;
+            } else {
+                fatorR = 0.28; // Fator R padrão
+                proLaboreConsiderado = faturamentoMensal * 0.28; // Calcula pró-labore para Fator R de 28%
+                proLaboreEl.value = proLaboreConsiderado.toFixed(2); // Exibe no campo desabilitado
+            }
+            
+            // Exibe os valores calculados de pró-labore e Fator R
+            proLaboreConsideradoValorEl.textContent = formatCurrency(proLaboreConsiderado);
+            fatorRValorEl.textContent = formatPercentage(fatorR);
+
+            let tabelaAnexo;
+            let nomeAnexo;
+
+            // Determina o anexo com base no Fator R
+            if (fatorR >= 0.28) {
+                nomeAnexo = 'Anexo III';
+                tabelaAnexo = anexoIII;
+            } else {
+                nomeAnexo = 'Anexo V';
+                tabelaAnexo = anexoV;
+            }
+            anexoValorEl.textContent = nomeAnexo;
+            // Adiciona informação visual sobre o Fator R
+            if (fatorR >= 0.28) {
+                anexoValorEl.innerHTML += ` <span class="text-xs text-green-600">(Fator R ≥ 28%)</span>`;
+            } else {
+                anexoValorEl.innerHTML += ` <span class="text-xs text-orange-600">(Fator R < 28%)</span>`;
+            }
+
+            // Calcula a Receita Bruta Anualizada (RBT12)
+            const rbt12 = faturamentoMensal * 12;
+
+            // Verifica se ultrapassa o limite do Simples Nacional
+            if (rbt12 > 4800000) {
+                mensagemAlertaEl.textContent = `Com um faturamento anualizado de ${formatCurrency(rbt12)}, sua empresa ultrapassa o limite de R$ 4.800.000,00 para o Simples Nacional. Consulte um contador.`;
+                mensagemAlertaEl.classList.add('error-box');
+                aliquotaEfetivaValorEl.textContent = 'N/A';
+                tributoEstimadoValorEl.textContent = 'N/A';
+                // Mostra alguns resultados mesmo ultrapassando o limite
+                document.getElementById('proLaboreConsideradoResult').classList.remove('hidden');
+                document.getElementById('fatorRResult').classList.remove('hidden');
+                document.getElementById('anexoResult').classList.remove('hidden'); 
+                document.getElementById('aliquotaEfetivaResult').classList.add('hidden');
+                document.getElementById('tributoEstimadoResult').classList.add('hidden');
+                resultadosDiv.classList.remove('hidden');
+                return;
+            } else {
+                 document.getElementById('aliquotaEfetivaResult').classList.remove('hidden');
+                 document.getElementById('tributoEstimadoResult').classList.remove('hidden');
+            }
+
+            let aliquotaNominalDaFaixa = 0;
+            let parcelaADeduzirDaFaixa = 0;
+
+            // Encontra a faixa de tributação e a parcela a deduzir
+            for (const faixa of tabelaAnexo) {
+                if (rbt12 <= faixa.faixaAte) {
+                    aliquotaNominalDaFaixa = faixa.aliquota;
+                    parcelaADeduzirDaFaixa = faixa.deduzir;
+                    break;
+                }
+                // Fallback para a última faixa se nenhuma condição anterior for atendida
+                aliquotaNominalDaFaixa = tabelaAnexo[tabelaAnexo.length - 1].aliquota;
+                parcelaADeduzirDaFaixa = tabelaAnexo[tabelaAnexo.length - 1].deduzir;
+            }
+            
+            // Calcula a alíquota efetiva
+            const aliquotaEfetiva = rbt12 > 0 ? ((rbt12 * aliquotaNominalDaFaixa) - parcelaADeduzirDaFaixa) / rbt12 : 0;
+            const aliquotaEfetivaFinal = Math.max(0, aliquotaEfetiva); // Garante que não seja negativa
+            aliquotaEfetivaValorEl.textContent = formatPercentage(aliquotaEfetivaFinal);
+
+            // Calcula o tributo mensal estimado
+            const tributoEstimadoMensal = faturamentoMensal * aliquotaEfetivaFinal;
+            tributoEstimadoValorEl.textContent = formatCurrency(tributoEstimadoMensal);
+            
+            // Mensagem informativa sobre o cálculo
+            if (rbt12 > 0) {
+                mensagemAlertaEl.textContent = `Cálculo baseado em uma Receita Bruta Anualizada (RBT12) estimada de ${formatCurrency(rbt12)}.`;
+                mensagemAlertaEl.classList.add('info-box');
+            } else { 
+                mensagemAlertaEl.textContent = 'Faturamento mensal é zero, resultando em zero tributos estimados.';
+                mensagemAlertaEl.classList.add('info-box');
+            }
+
+            // Exibe a seção de resultados
+            resultadosDiv.classList.remove('hidden');
+        });
+    </script>
+</body>
+</html>
